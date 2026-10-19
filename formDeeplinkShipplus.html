@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrueMoney Deeplink Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .card {
+            background: #fff;
+            width: 100%;
+            max-width: 640px;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        h2 {
+            margin: 0 0 24px;
+            color: #1a202c;
+            font-size: 22px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        select:focus,
+        input:focus {
+            border-color: #ff6a00;
+            ring: 2px solid #ff6a00;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .btn {
+            background: #ff6a00;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #e55e00;
+        }
+
+        .output-area {
+            margin-top: 24px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 110px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            font-family: monospace;
+            font-size: 12px;
+            resize: none;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            margin-top: 8px;
+            background: #edf2f7;
+            color: #2d3748;
+            border: 1px solid #cbd5e1;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .copy-btn:hover {
+            background: #e2e8f0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h2>TrueMoney Deeplink Generator</h2>
+
+        <!-- Input Box 1: ENV -->
+        <div class="form-group">
+            <label for="env">Environment (ENV)</label>
+            <select id="env">
+                <option value="DEV">DEV</option>
+                <option value="UAT">UAT</option>
+                <option value="PROD">PROD</option>
+            </select>
+        </div>
+
+        <!-- Input Box 2: Type -->
+        <div class="form-group">
+            <label for="linkType">Deeplink Type</label>
+            <select id="linkType">
+                <option value="widget">Widget</option>
+                <option value="product">Product</option>
+            </select>
+        </div>
+
+        <!-- Input Box 3: Product URL (Conditional) -->
+        <div class="form-group hidden" id="productUrlGroup">
+            <label for="productUrl">Product URL</label>
+            <input type="url" id="productUrl" placeholder="https://tmn-mall.amaze.shop/th/products/...">
+        </div>
+
+        <button class="btn" onclick="generateDeeplink()">Generate Deeplink</button>
+
+        <!-- Output Box -->
+        <div class="output-area">
+            <label for="output">Generated Deeplink</label>
+            <textarea id="output" readonly placeholder="Your generated deeplink will appear here..."></textarea>
+            <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        const envConfig = {
+            DEV: {
+                domain: 'https://tmn-dev.app.link/',
+                defaultUrl: 'https://dev-tmn-mall.amaze-x.com',
+                title_th: 'ทรู มันนี่',
+                title_en: 'TrueMoney'
+            },
+            UAT: {
+                domain: 'https://tmn-dev.app.link/',
+                defaultUrl: 'https://uat-tmn-mall.amaze-x.com',
+                title_th: 'ทรู มันนี่',
+                title_en: 'TrueMoney'
+            },
+            PROD: {
+                domain: 'https://tmn.app.link/',
+                defaultUrl: 'https://tmn-mall.amaze.shop',
+                title_th: 'SHOPPLUS By Amaze',
+                title_en: 'SHOPPLUS By Amaze'
+            }
+        };
+
+        const linkTypeSelect = document.getElementById('linkType');
+        const productUrlGroup = document.getElementById('productUrlGroup');
+        const productUrlInput = document.getElementById('productUrl');
+        const envSelect = document.getElementById('env');
+        const outputArea = document.getElementById('output');
+
+        // Toggle Input Box 3 visibility based on Deeplink type
+        linkTypeSelect.addEventListener('change', () => {
+            if (linkTypeSelect.value === 'product') {
+                productUrlGroup.classList.remove('hidden');
+            } else {
+                productUrlGroup.classList.add('hidden');
+            }
+        });
+
+        function generateDeeplink() {
+            const env = envSelect.value;
+            const type = linkTypeSelect.value;
+            const config = envConfig[env];
+
+            let targetUrl = config.defaultUrl;
+            let titleTh = config.title_th;
+            let titleEn = config.title_en;
+
+            if (type === 'product') {
+                const inputVal = productUrlInput.value.trim();
+                if (!inputVal) {
+                    alert('Please enter a Product URL');
+                    return;
+                }
+                targetUrl = inputVal;
+                // In sample PDP data, title fields resolve to "TrueMoney" / "ทรู มันนี่" across envs
+                if (env === 'PROD') {
+                    titleTh = 'ทรู มันนี่';
+                    titleEn = 'TrueMoney';
+                }
+            }
+
+            const methodObj = {
+                url: targetUrl,
+                title_th: titleTh,
+                title_en: titleEn
+            };
+
+            // Construct internal URI scheme
+            const internalUrl = `ascendmoney://wallet.truemoney.co.th/app/660000000022?type=content&method=${JSON.stringify(methodObj)}`;
+
+            // Wrap into outer Branch/App link
+            const finalDeeplink = `${config.domain}?deeplink=${encodeURIComponent(internalUrl)}`;
+
+            outputArea.value = finalDeeplink;
+        }
+
+        function copyToClipboard() {
+            if (!outputArea.value) return;
+            navigator.clipboard.writeText(outputArea.value).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.innerText = 'Copied!';
+                setTimeout(() => { btn.innerText = 'Copy to Clipboard'; }, 2000);
+            });
+        }
+    </script>
+
+</body>
+
+</html>
